@@ -1,0 +1,15 @@
+## Interface: 30200
+## Title: Overhead
+## Notes: Additional features added to default nameplates
+## Author: Kollektiv
+## SavedVariables: OverheadDB
+## X-Curse-Packaged-Version: 0.1 Beta
+## X-Curse-Project-Name: Overhead
+## X-Curse-Project-ID: overhead
+## X-Curse-Repository-ID: wow/overhead/mainline
+## X-Curse-Packaged-Version: v0.2-beta
+## X-Curse-Project-Name: Overhead
+## X-Curse-Project-ID: overhead
+## X-Curse-Repository-ID: wow/overhead/mainline
+
+Overhead.lua
