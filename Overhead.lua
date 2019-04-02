@@ -293,7 +293,7 @@ function Overhead:ProcessFrames(frame,...)
 		
 		-- when the casting isn't interruptable the shield border cause the default points changed, so set it the fixed value temporally. 
 		nameplate.castbarpoint[5]=5.4848
-		nameplate.spelliconpoint[5]=10.3428
+		nameplate.spelliconpoint[5]=9
 	
 		nameplate.castbarH = castbar:GetHeight()
 		nameplate.castbarW = castbar:GetWidth()
