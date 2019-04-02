@@ -8,14 +8,12 @@
 --[[
 	Modified by superk, adding showlist/hidelist and a command configuration, updated for 4.06+.
 ]]
-local defaults = { enable = true, party = true, partypet = true, enemypet = true }
+local defaults = { enable = true, party = true, enemypet = true }
 local cvartemp = {}
 OverheadDB = OverheadDB or defaults
 local Overhead = {}
 Overhead.frame = CreateFrame("Frame")
 
--- V: debug stuff
-local ENABLE_EVERYWHERE = true
 
 local function log(msg) DEFAULT_CHAT_FRAME:AddMessage("|cff32CD32Overhead:|r " .. msg) end
 
@@ -48,11 +46,10 @@ local showlist = {
 }
 -- Hide nameplates of enemys' or friends' pet (or players) when you have toggled pets in interface and other pets (or players) will be showed
 -- This is default hidelist
--- V: disabled hideList, won't work
---local hidelist = { 
---	--["Treant"] = true,
---	--["Shadowfiend"] = true,
---}
+local hidelist = { 
+	--["Treant"] = true,
+	--["Shadowfiend"] = true,
+}
 OverheadDB.showlist = OverheadDB.showlist or showlist
 OverheadDB.hidelist = OverheadDB.hidelist or hidelist
 -- Arena Unit IDs
@@ -62,7 +59,7 @@ local uids = {"arena1","arenapet1","pet",
 				"arena3","arenapet3","party2","partypet2",
 				"arena4","arenapet4","party3","partypet3",
 				"arena5","arenapet5","party4","partypet4"}
---local bracket = 19
+local bracket = 19
 
 -- AnchorNameplates for loop upper bound
 
@@ -116,12 +113,8 @@ function Overhead:OnLoad()
 	self.db = OverheadDB
 	self.db.showlist = self.db.showlist or showlist
 	self.db.hidelist = self.db.hidelist or hidelist
-	if IsAddOnLoaded("icicle") then
-		self.db.enable = false
-		log("Icicle is loaded, and it has a conflict with overhead, so overhead is disabled now. You can enable it again by type'/oh enable'")
-	end
 	for k,v in pairs(defaults) do 
-		if self.db[k] == nil then self.db[k] = defaults[k] end
+		if self.db[k] == nil then self.db[k] = true end
 	end
 	-- Store the origenal CVar
 	--[[cvartemp = {
@@ -180,17 +173,13 @@ function Overhead:Command(msg , tbl)
 			["on"] = function() self.db.party = true; log("set party castbar on") end,
 			["off"] = function() self.db.party = false; log("set party castbar off") end,
  		},
-		["arenapet"] = {
+		["pet"] = {
 			["on"] = function() self.db.enemypet = true; log("set enemypet castbar on") end,
 			["off"] = function() self.db.enemypet = false; log("set enemypet castbar off") end,
 		},
-		["partypet"] = {
-			["on"] = function() self.db.partypet = true; log("set partypet castbar on") end,
-			["off"] = function() self.db.partypet = false; log("set partypet castbar off") end,
-		},
 		["disable"] = function() self.db.enable = false; log("set to be disabled") end,
 		["enable"] = function() self.db.enable = true; log("set to be enabled") end,
-		["status"] = function() log ("addon[".. (self.db.enable and "on]" or "off]").."  arenapet["..(self.db.enemypet and "on]" or "off]").."  party["..(self.db.party and "on]" or "off]").."  partypet["..(self.db.partypet and "on]" or "off]")) end,
+		["status"] = function() log ("addon[".. (self.db.enable and "on]" or "off]").."  pet["..(self.db.enemypet and "on]" or "off]").."  party["..(self.db.party and "on]" or "off]")) end,
 		["reset"] = function() OverheadDB = {}; log("reset overhead's database") end,
  		["help"] = function() log("\n'/oh party [on/off]' to set party castbar\n'/oh pet [on/off]' to set enemypet castbar\n'/oh [disable/enable]' to set the whole(works after reloading)\n'/oh status' to see the status\n'/oh reset' to reset database(works after reloading)\n'/oh showlist [add/del] [name]' to show or set showlist\n'/oh hidelist [add/del] [name]' to show or set hidelist") end,
 	}
@@ -210,6 +199,7 @@ end
 -- Nameplate OnHide handler
 local function OnHide(self)
 	self.name:SetText("")
+	self.shouldShowArt = false
 end
 
 local function ShowArt(self)
@@ -219,11 +209,11 @@ local function ShowArt(self)
 	self.castbar:SetAlpha(1)
 	self.healthborder:SetAlpha(1)
 	self.name:SetAlpha(1)
---	self.shield:SetAlpha(1)
+	self.shield:SetAlpha(1)
 	self.level:SetAlpha(1)
 	self.glow:SetAlpha(1)
 	self.skull:SetAlpha(1)
---	self.castbarfill:SetAlpha(1)
+	self.castbarfill:SetAlpha(1)
 	self.healthbarfill:SetAlpha(1)
 	self.raidicons:SetAlpha(1)
 	self.eliteicon:SetAlpha(1)
@@ -237,11 +227,11 @@ local function HideArt(self)
 	self.castbar:SetAlpha(0)
 	self.healthborder:SetAlpha(0)
 	self.name:SetAlpha(0)
---	self.shield:SetAlpha(0)
+	self.shield:SetAlpha(0)
 	self.level:SetAlpha(0)
 	self.glow:SetAlpha(0)
 	self.skull:SetAlpha(0)
---	self.castbarfill:SetAlpha(0)
+	self.castbarfill:SetAlpha(0)
 	self.healthbarfill:SetAlpha(0)
 	self.raidicons:SetAlpha(0)
 	self.eliteicon:SetAlpha(0)
@@ -249,23 +239,17 @@ local function HideArt(self)
 end
 
 -- Process nameplates and add to the cache
--- CATA VERSION
 function Overhead:ProcessFrames(frame,...)
 	if not frame then return end
 
---	if not nameplates[frame] and strfind(frame:GetName() or "[NONE]","NamePlate") then
-	local region = frame:GetRegions()
-	if not frame:GetName() and not nameplates[frame] and region and region:GetObjectType() == "Texture" and region:GetTexture() == "Interface\\TargetingFrame\\UI-TargetingFrame-Flash" then
-		local nameplate = frame
+	if not nameplates[frame] and strfind (frame:GetName() or "[NONE]","NamePlate") then
+		local nameplate = frame		
 		-- Get StatusBar children
 		nameplate.healthbar, nameplate.castbar = nameplate:GetChildren()
 		local castbar = nameplate.castbar
-		-- Get regions
-		-- V: this is wotlk region code; I commentated the cata one
-		local targetflash, healthborder, castborder, castborder2, spellicon, glow, name, level, skull, raidicons, eliteicon = nameplate:GetRegions()
-		--local targetflash, healthborder, glow, name, level, skull, raidicons, eliteicon = nameplate:GetRegions()
-		--local castbarfill, castborder, shield, spellicon = nameplate.castbar:GetRegions()
-
+		-- Get regions 
+		local targetflash, healthborder, glow, name, level, skull, raidicons, eliteicon = nameplate:GetRegions()
+		local castbarfill, castborder, shield, spellicon = nameplate.castbar:GetRegions()
 		local healthbarfill = nameplate.healthbar:GetRegions()
 		nameplate.targetflash = targetflash
 		nameplate.healthborder = healthborder
@@ -290,8 +274,7 @@ function Overhead:ProcessFrames(frame,...)
 		nameplate.castborderpoint = {castborder:GetPoint()}
 		nameplate.spelliconpoint = {spellicon:GetPoint()}
 		-- nameplate.shieldpoint = {shield:GetPoint()}
-		
-		-- when the casting isn't interruptable the shield border cause the default points changed, so set it the fixed value temporally. 
+		-- for some unknown reason the point sometimes is not correct, so set it myself
 		nameplate.castbarpoint[5]=5.4848
 		nameplate.spelliconpoint[5]=10.3428
 	
@@ -372,6 +355,7 @@ function Overhead:GetNameplate(uid)
 	for nameplate in pairs(nameplates) do
 		-- Name text and healthbar's maxvalue must match
 		if nameplate.name:GetText() == name and select(2,nameplate.healthbar:GetMinMaxValues()) == max then
+			nameplate.shouldShowArt = true
 			return nameplate
 		end
 	end
@@ -379,13 +363,13 @@ end
 
 -- Puts castbars on visible arena ids
 function Overhead:AnchorNameplates()
-	for id=1,#uids do -- V: don't use brackets but #uids
+	for id=1,bracket do 
 		local uid = uids[id]
 		local nameplate = self:GetNameplate(uid)
 		-- Nameplate found with no castbar on it
 		if UnitExists(uid) and nameplate and not active[uid] then
+			nameplate.shouldShowArt = true
 			local castbar = self:GetCastBar(nameplate)
-			nameplate.uid = uid
 	
 			castbar:SetPoint(unpack(nameplate.castbarpoint))
 			castbar.spellicon:SetPoint(unpack(nameplate.spelliconpoint))
@@ -409,7 +393,6 @@ function Overhead:DisplayerOnUpdate(elapsed)
 	if displayElapsed > displayThrottle then
 		Overhead:AnchorNameplates()
 		Overhead:UpdateArt()
-		displayElapsed = 0
 	end
 end
 
@@ -419,37 +402,36 @@ function Overhead:UpdateArt()
 		local unit_name = nameplate.name:GetText() or "[NONE]"
 		if self.db.hidelist[unit_name] then
 			nameplate:HideArt()
-		--elseif self.db.showlist[unit_name] then
-		--	nameplate:ShowArt()
-		--elseif nameplate.shouldShowArt an then
-		--	nameplate:ShowArt()
-		else 
+		elseif self.db.showlist[unit_name] then
 			nameplate:ShowArt()
+		elseif nameplate.shouldShowArt then
+			nameplate:ShowArt()
+		else 
+			nameplate:HideArt()
 		end
 	end
 end
 
 -- Used when entering a non-arena zone
 function Overhead:ResetAllNameplates()
-	for nameplate in pairs(nameplates) do nameplate:ShowArt(); nameplates[nameplate] = nil end
+	for nameplate in pairs(nameplates) do nameplate:ShowArt(); nameplate.shouldShowArt = false end
 end
 
 -- Set bracket upvalue
 -- http://www.wowwiki.com/API_GetBattlefieldStatus
-function Overhead:UpdateBracket() 
-	-- V: removed this, whatever happens in BGs is w/e
-	--for i=1, MAX_BATTLEFIELD_QUEUES do
-	--	local status,_,_,_,_,size = GetBattlefieldStatus(i)
-	--	if status == "active" and size > 0 then
-	--		bracket = size * 4 - 1 --enemy and his pet, party and partypet
-	--		break
-	--	end
-	--end
+function Overhead:UpdateBracket()  
+	for i=1, MAX_BATTLEFIELD_QUEUES do
+		local status,_,_,_,_,size = GetBattlefieldStatus(i)
+		if status == "active" and size > 0 then
+			bracket = size * 4 - 1 --enemy and his pet, party and partypet
+			break
+		end
+	end
 end
 
+
 function Overhead:ZoneChange()
-	children = 0
-	local InArena = ENABLE_EVERYWHERE or select(2,IsInInstance()) == "arena"
+	local InArena = select(2,IsInInstance()) == "arena"
 	if InArena and self.db.enable then
 		self.Scanner:Show()
 		self.Displayer:Show()
@@ -526,7 +508,7 @@ end]]
 function Overhead:CastStart(uid)
 	if uid:find("arenapet") and not self.db.enemypet then return end
 	if uid:find("party") and not self.db.party then return end
-	if (uid:find("partypet") or uid == "pet") and not self.db.partypet then return end
+	if uid:find("partypet") or uid == "pet" then return end
 	if active[uid] then
 		local _, _, _, icon, starttime, endtime, _, notInterruptible = UnitCastingInfo(uid)
 		local castbar = active[uid]
@@ -554,7 +536,7 @@ end
 function Overhead:ChannelStart(uid)
 	if uid:find("arenapet") and not self.db.enemypet then return end
 	if uid:find("party") and not self.db.party then return end
-	if (uid:find("partypet") or uid == "pet") and not self.db.partypet then return end
+	if uid:find("partypet") or uid == "pet" then return end
 	if active[uid] then
 		local _, _, _, icon, starttime, endtime, _, notInterruptible = UnitChannelInfo(uid)
 		local castbar = active[uid]
