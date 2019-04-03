@@ -28,7 +28,8 @@ local GetTime,IsInInstance,GetBattlefieldStatus = GetTime,IsInInstance,GetBattle
 local SetCVar,GetCVar = SetCVar,GetCVar
 
 -- Displayer OnUpdate throttling
-local displayThrottle, displayElapsed = 0.1, 0
+local displayThrottle, displayElapsed = 0.2, 0
+local worldThrottle, worldElapsed = 0.2, 0
 
 -- Caches
 local nameplates,castbars = {},{}
@@ -316,11 +317,15 @@ end
 
 -- Scanner OnUpdate
 local children
-function Overhead:ScanForNameplates()
-	if WorldFrame:GetNumChildren() ~= children then
-		-- # of children changed
-		children = WorldFrame:GetNumChildren()
-		Overhead:ProcessFrames(WorldFrame:GetChildren())
+function Overhead:ScanForNameplates(elapsed)
+	worldElapsed = worldElapsed + elapsed
+	if worldElapsed > worldThrottle then
+		if WorldFrame:GetNumChildren() ~= children then
+			-- # of children changed
+			children = WorldFrame:GetNumChildren()
+			Overhead:ProcessFrames(WorldFrame:GetChildren())
+		end
+		worldElapsed = 0
 	end
 end
 
